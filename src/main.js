@@ -179,7 +179,7 @@ async function extractPdfText(file) {
 }
 
 async function analyzeFile(file) {
-  const base = { name: file.name, size: file.size };
+  const base = { name: file.name, size: file.size, actualClassification: "", comment: "" };
   try {
     const fullText = await extractPdfText(file);
     const resolutionText = extractAfterLastResuelve(fullText);
@@ -240,6 +240,20 @@ function renderResults({ scroll = false } = {}) {
           <div class="review-badge ${reviewClass}">${result.manualReview ? "⚑ Revisión manual" : "✓ Confianza suficiente"}</div>
         </div>
         ${result.reason ? `<div class="result-warning">${escapeHtml(result.reason)}</div>` : ""}
+        <div class="feedback-panel">
+          <div>
+            <label for="actual-classification-${index}">Clasificación real</label>
+            <select id="actual-classification-${index}" data-actual-classification data-result-index="${index}">
+              <option value="" ${result.actualClassification === "" ? "selected" : ""}>Sin confirmar</option>
+              <option value="SI" ${result.actualClassification === "SI" ? "selected" : ""}>Finiquito</option>
+              <option value="NO" ${result.actualClassification === "NO" ? "selected" : ""}>No finiquito</option>
+            </select>
+          </div>
+          <div>
+            <label for="comment-${index}">Comentario <span>opcional</span></label>
+            <textarea id="comment-${index}" data-result-comment data-result-index="${index}" maxlength="1000" placeholder="Agregar una observación sobre este resultado">${escapeHtml(result.comment || "")}</textarea>
+          </div>
+        </div>
         <details>
           <summary>Ver términos y texto analizado <span>＋</span></summary>
           <div class="detail-grid">
@@ -276,22 +290,24 @@ async function processFiles() {
 function exportResults() {
   const rows = state.results.map((result) => ({
     "ARCHIVO PDF": result.name,
-    "CLASIFICACIÓN": result.classification === "SI" ? "FINIQUITO" : result.classification === "NO" ? "NO FINIQUITO" : "SIN CLASIFICAR",
+    "CLASIFICACIÓN DEL MODELO": result.classification === "SI" ? "FINIQUITO" : result.classification === "NO" ? "NO FINIQUITO" : "SIN CLASIFICAR",
+    "CLASIFICACIÓN REAL": result.actualClassification === "SI" ? "FINIQUITO" : result.actualClassification === "NO" ? "NO FINIQUITO" : "SIN CONFIRMAR",
     "PROBABILIDAD FINIQUITO": result.probability,
     "CONFIANZA": result.confidence,
     "REQUIERE REVISIÓN MANUAL": result.manualReview ? "SI" : "NO",
+    "COMENTARIO": result.comment || "",
     "MOTIVO / ADVERTENCIA": result.reason,
     "TÉRMINOS CON MAYOR CONTRIBUCIÓN": result.decisiveTerms.map((item) => `${item.term} (${item.contribution.toFixed(4)})`).join("; "),
     "TEXTO DESPUÉS DEL ÚLTIMO RESUELVE": result.resolutionText,
   }));
   const sheet = XLSX.utils.json_to_sheet(rows);
   sheet["!cols"] = [
-    { wch: 34 }, { wch: 18 }, { wch: 23 }, { wch: 14 },
-    { wch: 27 }, { wch: 34 }, { wch: 65 }, { wch: 110 },
+    { wch: 34 }, { wch: 24 }, { wch: 22 }, { wch: 23 }, { wch: 14 },
+    { wch: 27 }, { wch: 45 }, { wch: 34 }, { wch: 65 }, { wch: 110 },
   ];
   for (let row = 2; row <= rows.length + 1; row += 1) {
-    if (sheet[`C${row}`]) sheet[`C${row}`].z = "0.00%";
     if (sheet[`D${row}`]) sheet[`D${row}`].z = "0.00%";
+    if (sheet[`E${row}`]) sheet[`E${row}`].z = "0.00%";
   }
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, sheet, "Clasificación");
@@ -329,6 +345,18 @@ els.summaryCards.addEventListener("click", (event) => {
   if (!button) return;
   state.resultFilter = button.dataset.resultFilter;
   renderResults();
+});
+els.resultsList.addEventListener("change", (event) => {
+  const select = event.target.closest("[data-actual-classification]");
+  if (!select) return;
+  const result = state.results[Number(select.dataset.resultIndex)];
+  if (result) result.actualClassification = select.value;
+});
+els.resultsList.addEventListener("input", (event) => {
+  const textarea = event.target.closest("[data-result-comment]");
+  if (!textarea) return;
+  const result = state.results[Number(textarea.dataset.resultIndex)];
+  if (result) result.comment = textarea.value;
 });
 els.processButton.addEventListener("click", processFiles);
 els.exportButton.addEventListener("click", exportResults);
