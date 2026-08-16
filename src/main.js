@@ -238,13 +238,18 @@ function renderResults({ scroll = false } = {}) {
     els.resultsList.replaceChildren(emptyResults);
   }
   els.resultsSection.hidden = false;
-  if (scroll) els.resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (scroll) {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    els.resultsSection.focus({ preventScroll: true });
+    els.resultsSection.scrollIntoView({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
+  }
 }
 
 async function processFiles() {
   if (!state.model || !state.files.length || state.processing) return;
   state.processing = true;
   state.results = [];
+  els.resultsSection.setAttribute("aria-busy", "true");
   updateControls();
   renderFiles();
   const label = els.processButton.querySelector("span");
@@ -255,6 +260,7 @@ async function processFiles() {
   label.textContent = "Analizar documentos";
   state.processing = false;
   state.resultFilter = "total";
+  els.resultsSection.removeAttribute("aria-busy");
   updateControls();
   renderFiles();
   renderResults({ scroll: true });

@@ -9,16 +9,17 @@
     <title>Clasificador de finiquitos</title>
   </head>
   <body>
+    <a class="skip-link" href="#mainContent">Saltar al contenido principal</a>
     <div id="app">
       <header class="topbar">
-        <a class="brand" href="#" aria-label="Inicio">
+        <a class="brand" href="#">
           <span class="brand-mark" aria-hidden="true">LF</span>
           <span><strong>LexFiniquito</strong><small>Clasificador de resoluciones judiciales</small></span>
         </a>
         <div class="privacy-pill"><span></span> Procesamiento en el navegador</div>
       </header>
 
-      <main>
+      <main id="mainContent" tabindex="-1">
         <section class="hero">
           <div>
             <p class="eyebrow">CLASIFICADOR DE RESOLUCIONES</p>
@@ -45,10 +46,10 @@
               <small>Se admite uno o varios archivos PDF</small>
             </label>
             <div class="file-list" id="fileList" aria-live="polite"></div>
-            <button class="primary-button" id="processButton" type="button" disabled>
+            <button class="primary-button" id="processButton" type="button" aria-controls="resultsSection" disabled>
               <span>Analizar documentos</span><b aria-hidden="true">→</b>
             </button>
-            <p class="model-status" id="modelStatus"><i></i> Preparando modelo local…</p>
+            <p class="model-status" id="modelStatus" role="status" aria-live="polite"><i></i> Preparando modelo local…</p>
           </div>
 
           <aside class="process-panel">
@@ -63,12 +64,12 @@
           </aside>
         </section>
 
-        <section class="results-section" id="resultsSection" hidden>
+        <section class="results-section" id="resultsSection" aria-labelledby="resultsHeading" tabindex="-1" hidden>
           <div class="results-title">
-            <div><p class="eyebrow">RESULTADOS</p><h2>Análisis completado</h2><p id="resultsSummary"></p></div>
+            <div><p class="eyebrow">RESULTADOS</p><h2 id="resultsHeading">Análisis completado</h2><p id="resultsSummary" role="status" aria-live="polite"></p></div>
             <button class="export-button" id="exportButton" type="button">Exportar a Excel <span>⇩</span></button>
           </div>
-          <div class="summary-cards" id="summaryCards"></div>
+          <div class="summary-cards" id="summaryCards" role="group" aria-label="Filtrar resultados"></div>
           <div class="results-list" id="resultsList"></div>
         </section>
       </main>
