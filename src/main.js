@@ -11,6 +11,7 @@ const state = {
   classify: null,
   files: [],
   results: [],
+  resultFilter: "total",
   processing: false,
 };
 
@@ -198,19 +199,32 @@ function percent(value) {
   return value === null ? "—" : `${(value * 100).toFixed(1)}%`;
 }
 
-function renderResults() {
+function matchesResultFilter(result) {
+  if (state.resultFilter === "yes") return result.status === "ok" && result.classification === "SI";
+  if (state.resultFilter === "no") return result.status === "ok" && result.classification === "NO";
+  if (state.resultFilter === "review") return result.manualReview;
+  return true;
+}
+
+function renderResults({ scroll = false } = {}) {
   const valid = state.results.filter((result) => result.status === "ok");
   const yes = valid.filter((result) => result.classification === "SI").length;
   const no = valid.filter((result) => result.classification === "NO").length;
   const reviews = state.results.filter((result) => result.manualReview).length;
-  els.resultsSummary.textContent = `${state.results.length} documento${state.results.length === 1 ? "" : "s"} procesado${state.results.length === 1 ? "" : "s"}`;
+  const filteredResults = state.results
+    .map((result, index) => ({ result, index }))
+    .filter(({ result }) => matchesResultFilter(result));
+  const processedText = `${state.results.length} documento${state.results.length === 1 ? "" : "s"} procesado${state.results.length === 1 ? "" : "s"}`;
+  els.resultsSummary.textContent = state.resultFilter === "total"
+    ? processedText
+    : `${processedText} · ${filteredResults.length} resultado${filteredResults.length === 1 ? "" : "s"} visible${filteredResults.length === 1 ? "" : "s"}`;
   els.summaryCards.innerHTML = `
-    <div><span>Total</span><strong>${state.results.length}</strong></div>
-    <div class="yes"><span>Finiquitos</span><strong>${yes}</strong></div>
-    <div class="no"><span>No finiquitos</span><strong>${no}</strong></div>
-    <div class="review"><span>Revisión manual</span><strong>${reviews}</strong></div>
+    <button class="summary-card ${state.resultFilter === "total" ? "active" : ""}" type="button" data-result-filter="total" aria-pressed="${state.resultFilter === "total"}"><span>Total</span><strong>${state.results.length}</strong></button>
+    <button class="summary-card yes ${state.resultFilter === "yes" ? "active" : ""}" type="button" data-result-filter="yes" aria-pressed="${state.resultFilter === "yes"}"><span>Finiquitos</span><strong>${yes}</strong></button>
+    <button class="summary-card no ${state.resultFilter === "no" ? "active" : ""}" type="button" data-result-filter="no" aria-pressed="${state.resultFilter === "no"}"><span>No finiquitos</span><strong>${no}</strong></button>
+    <button class="summary-card review ${state.resultFilter === "review" ? "active" : ""}" type="button" data-result-filter="review" aria-pressed="${state.resultFilter === "review"}"><span>Revisión manual</span><strong>${reviews}</strong></button>
   `;
-  els.resultsList.innerHTML = state.results.map((result, index) => {
+  els.resultsList.innerHTML = filteredResults.map(({ result, index }) => {
     const terms = result.decisiveTerms.length
       ? result.decisiveTerms.map((item) => `<span title="Contribución: ${item.contribution.toFixed(4)}">${escapeHtml(item.term)}</span>`).join("")
       : "<em>Sin términos disponibles</em>";
@@ -235,9 +249,9 @@ function renderResults() {
         </details>
       </article>
     `;
-  }).join("");
+  }).join("") || `<p class="empty-results">No hay documentos en esta categoría.</p>`;
   els.resultsSection.hidden = false;
-  els.resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (scroll) els.resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function processFiles() {
@@ -253,9 +267,10 @@ async function processFiles() {
   }
   label.textContent = "Analizar documentos";
   state.processing = false;
+  state.resultFilter = "total";
   updateControls();
   renderFiles();
-  renderResults();
+  renderResults({ scroll: true });
 }
 
 function exportResults() {
@@ -304,9 +319,16 @@ els.fileList.addEventListener("click", (event) => {
 els.clearButton.addEventListener("click", () => {
   state.files = [];
   state.results = [];
+  state.resultFilter = "total";
   els.resultsSection.hidden = true;
   renderFiles();
   updateControls();
+});
+els.summaryCards.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-result-filter]");
+  if (!button) return;
+  state.resultFilter = button.dataset.resultFilter;
+  renderResults();
 });
 els.processButton.addEventListener("click", processFiles);
 els.exportButton.addEventListener("click", exportResults);
