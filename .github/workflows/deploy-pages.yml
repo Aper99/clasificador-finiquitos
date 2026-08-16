@@ -23,16 +23,13 @@ jobs:
       - name: Descargar el repositorio
         uses: actions/checkout@v6
 
-      - name: Instalar pnpm
-        uses: pnpm/action-setup@v4
+      - name: Configurar pnpm y Node.js
+        uses: pnpm/setup@v1
         with:
           version: 11.16.0
-
-      - name: Configurar Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: pnpm
+          runtime: node@24
+          cache: true
+          install: false
 
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
