@@ -1,0 +1,20 @@
+{
+  "name": "clasificador-finiquito-local",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.16.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --base=./",
+    "preview": "vite preview",
+    "test": "node tests/model.test.mjs"
+  },
+  "dependencies": {
+    "pdfjs-dist": "5.4.149",
+    "xlsx": "0.18.5"
+  },
+  "devDependencies": {
+    "vite": "7.1.3"
+  }
+}

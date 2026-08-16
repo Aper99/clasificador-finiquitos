@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.python_packages/
+.pnpm-store/
+.finiquito-server.pid
+.finiquito-server.log
+.finiquito-server-error.log
+*.log
+
+# Archivos de trabajo que no forman parte de la aplicación
+csj_pdfs/
+*.pdf
+*.xlsx
+*.xls
+*.csv
+*.ipynb
+*.joblib
+metricas_*.json
