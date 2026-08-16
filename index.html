@@ -9,7 +9,120 @@
     <title>Clasificador de finiquitos</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="Inicio">
+          <span class="brand-mark" aria-hidden="true">LF</span>
+          <span><strong>LexFiniquito</strong><small>Clasificador de resoluciones judiciales</small></span>
+        </a>
+        <div class="privacy-pill"><span></span> Procesamiento en el navegador</div>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div>
+            <p class="eyebrow">CLASIFICADOR DE RESOLUCIONES</p>
+            <h1>Identificación de<br><em>finiquitos en PDF.</em></h1>
+            <p class="hero-copy">La aplicación clasifica resoluciones judiciales como finiquito o no finiquito mediante un modelo de regresión logística.</p>
+          </div>
+          <div class="trust-card">
+            <div class="shield" aria-hidden="true">✓</div>
+            <div><strong>Procesamiento local</strong><span>Los PDF y los resultados se procesan en el navegador.</span></div>
+          </div>
+        </section>
+
+        <section class="workspace">
+          <div class="upload-panel">
+            <div class="section-heading">
+              <div><span class="step">01</span><h2>Seleccione los documentos</h2></div>
+              <button class="text-button" id="clearButton" type="button" disabled>Limpiar</button>
+            </div>
+            <label class="dropzone" id="dropzone" for="fileInput">
+              <input id="fileInput" type="file" accept="application/pdf,.pdf" multiple />
+              <span class="upload-icon" aria-hidden="true">↥</span>
+              <strong>Arrastre sus PDF aquí</strong>
+              <span>o haga clic para seleccionarlos</span>
+              <small>Se admite uno o varios archivos PDF</small>
+            </label>
+            <div class="file-list" id="fileList" aria-live="polite"></div>
+            <button class="primary-button" id="processButton" type="button" disabled>
+              <span>Analizar documentos</span><b aria-hidden="true">→</b>
+            </button>
+            <p class="model-status" id="modelStatus"><i></i> Preparando modelo local…</p>
+          </div>
+
+          <aside class="process-panel">
+            <div class="section-heading"><div><span class="step">02</span><h2>Proceso</h2></div></div>
+            <ol class="process-list">
+              <li><b>1</b><div><strong>Lectura</strong><span>Se extrae el texto disponible en el PDF.</span></div></li>
+              <li><b>2</b><div><strong>Selección del texto</strong><span>Se utiliza el contenido posterior al último “RESUELVE”.</span></div></li>
+              <li><b>3</b><div><strong>Clasificación</strong><span>El modelo calcula la clase, la probabilidad y la confianza.</span></div></li>
+              <li><b>4</b><div><strong>Exportación</strong><span>Los resultados se pueden descargar en formato Excel.</span></div></li>
+            </ol>
+            <div class="security-note"><span>⌁</span><div><strong>Finalidad</strong><p>Facilitar la revisión inicial de resoluciones sin reemplazar el criterio profesional.</p></div></div>
+          </aside>
+        </section>
+
+        <section class="results-section" id="resultsSection" hidden>
+          <div class="results-title">
+            <div><p class="eyebrow">RESULTADOS</p><h2>Análisis completado</h2><p id="resultsSummary"></p></div>
+            <button class="export-button" id="exportButton" type="button">Exportar a Excel <span>⇩</span></button>
+          </div>
+          <div class="summary-cards" id="summaryCards"></div>
+          <div class="results-list" id="resultsList"></div>
+        </section>
+      </main>
+
+      <footer><span>LexFiniquito · Modelo de regresión logística</span><span class="academic-note">Proyecto elaborado como trabajo final para el Diplomado en Inteligencia Artificial Aplicada.</span></footer>
+    </div>
+
+    <template id="fileRowTemplate">
+      <div class="file-row">
+        <span class="pdf-badge">PDF</span>
+        <div><strong></strong><small></small></div>
+        <button type="button">×</button>
+      </div>
+    </template>
+
+    <template id="summaryCardTemplate">
+      <button class="summary-card" type="button"><span></span><strong></strong></button>
+    </template>
+
+    <template id="resultCardTemplate">
+      <article class="result-card">
+        <div class="result-main">
+          <span class="result-index"></span>
+          <div class="result-file"><strong></strong><small></small></div>
+          <div class="classification"><span>Clasificación</span><strong></strong></div>
+          <div class="metric probability"><span>Probabilidad de finiquito</span><strong></strong></div>
+          <div class="metric confidence"><span>Confianza</span><strong></strong></div>
+          <div class="review-badge"></div>
+        </div>
+        <div class="result-warning"></div>
+        <div class="feedback-panel">
+          <div>
+            <label class="actual-classification-label">Clasificación real</label>
+            <select data-actual-classification>
+              <option value="">Sin confirmar</option>
+              <option value="SI">Finiquito</option>
+              <option value="NO">No finiquito</option>
+            </select>
+          </div>
+          <div>
+            <label class="comment-label">Comentario <span>opcional</span></label>
+            <textarea data-result-comment maxlength="1000" placeholder="Agregar una observación sobre este resultado"></textarea>
+          </div>
+        </div>
+        <details>
+          <summary>Ver términos y texto analizado <span>＋</span></summary>
+          <div class="detail-grid">
+            <div><h3>Términos con mayor contribución</h3><div class="term-list"></div></div>
+            <div><h3>Texto posterior al último “RESUELVE”</h3><p class="resolution-text"></p></div>
+          </div>
+        </details>
+      </article>
+    </template>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

@@ -15,73 +15,6 @@ const state = {
   processing: false,
 };
 
-document.querySelector("#app").innerHTML = `
-  <header class="topbar">
-    <a class="brand" href="#" aria-label="Inicio">
-      <span class="brand-mark" aria-hidden="true">LF</span>
-      <span><strong>LexFiniquito</strong><small>Clasificador de resoluciones judiciales</small></span>
-    </a>
-    <div class="privacy-pill"><span></span> Procesamiento en el navegador</div>
-  </header>
-
-  <main>
-    <section class="hero">
-      <div>
-        <p class="eyebrow">CLASIFICADOR DE RESOLUCIONES</p>
-        <h1>Identificación de<br><em>finiquitos en PDF.</em></h1>
-        <p class="hero-copy">La aplicación clasifica resoluciones judiciales como finiquito o no finiquito mediante un modelo de regresión logística.</p>
-      </div>
-      <div class="trust-card">
-        <div class="shield" aria-hidden="true">✓</div>
-        <div><strong>Procesamiento local</strong><span>Los PDF y los resultados se procesan en el navegador.</span></div>
-      </div>
-    </section>
-
-    <section class="workspace">
-      <div class="upload-panel">
-        <div class="section-heading">
-          <div><span class="step">01</span><h2>Seleccione los documentos</h2></div>
-          <button class="text-button" id="clearButton" type="button" disabled>Limpiar</button>
-        </div>
-        <label class="dropzone" id="dropzone" for="fileInput">
-          <input id="fileInput" type="file" accept="application/pdf,.pdf" multiple />
-          <span class="upload-icon" aria-hidden="true">↥</span>
-          <strong>Arrastre sus PDF aquí</strong>
-          <span>o haga clic para seleccionarlos</span>
-          <small>Se admite uno o varios archivos PDF</small>
-        </label>
-        <div class="file-list" id="fileList" aria-live="polite"></div>
-        <button class="primary-button" id="processButton" type="button" disabled>
-          <span>Analizar documentos</span><b aria-hidden="true">→</b>
-        </button>
-        <p class="model-status" id="modelStatus"><i></i> Preparando modelo local…</p>
-      </div>
-
-      <aside class="process-panel">
-        <div class="section-heading"><div><span class="step">02</span><h2>Proceso</h2></div></div>
-        <ol class="process-list">
-          <li><b>1</b><div><strong>Lectura</strong><span>Se extrae el texto disponible en el PDF.</span></div></li>
-          <li><b>2</b><div><strong>Selección del texto</strong><span>Se utiliza el contenido posterior al último “RESUELVE”.</span></div></li>
-          <li><b>3</b><div><strong>Clasificación</strong><span>El modelo calcula la clase, la probabilidad y la confianza.</span></div></li>
-          <li><b>4</b><div><strong>Exportación</strong><span>Los resultados se pueden descargar en formato Excel.</span></div></li>
-        </ol>
-        <div class="security-note"><span>⌁</span><div><strong>Finalidad</strong><p>Facilitar la revisión inicial de resoluciones sin reemplazar el criterio profesional.</p></div></div>
-      </aside>
-    </section>
-
-    <section class="results-section" id="resultsSection" hidden>
-      <div class="results-title">
-        <div><p class="eyebrow">RESULTADOS</p><h2>Análisis completado</h2><p id="resultsSummary"></p></div>
-        <button class="export-button" id="exportButton" type="button">Exportar a Excel <span>⇩</span></button>
-      </div>
-      <div class="summary-cards" id="summaryCards"></div>
-      <div class="results-list" id="resultsList"></div>
-    </section>
-  </main>
-
-  <footer><span>LexFiniquito · Modelo de regresión logística</span><span class="academic-note">Proyecto elaborado como trabajo final para el Diplomado en Inteligencia Artificial Aplicada.</span></footer>
-`;
-
 const els = {
   fileInput: document.querySelector("#fileInput"),
   dropzone: document.querySelector("#dropzone"),
@@ -94,21 +27,21 @@ const els = {
   summaryCards: document.querySelector("#summaryCards"),
   resultsList: document.querySelector("#resultsList"),
   exportButton: document.querySelector("#exportButton"),
+  fileRowTemplate: document.querySelector("#fileRowTemplate"),
+  summaryCardTemplate: document.querySelector("#summaryCardTemplate"),
+  resultCardTemplate: document.querySelector("#resultCardTemplate"),
 };
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
 
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+}
+
+function setModelStatus(status, message) {
+  els.modelStatus.className = `model-status${status ? ` ${status}` : ""}`;
+  const indicator = document.createElement("i");
+  els.modelStatus.replaceChildren(indicator, document.createTextNode(message));
 }
 
 async function loadModel() {
@@ -118,12 +51,10 @@ async function loadModel() {
     state.model = await response.json();
     if (state.model.format !== "finiquito-tfidf-logreg-v1") throw new Error("Formato de modelo incompatible");
     state.classify = createClassifier(state.model);
-    els.modelStatus.classList.add("ready");
-    els.modelStatus.innerHTML = "<i></i> Modelo local listo · Umbral de decisión: " + (state.model.threshold * 100).toFixed(1) + "%";
+    setModelStatus("ready", `Modelo local listo · Umbral de decisión: ${(state.model.threshold * 100).toFixed(1)}%`);
     updateControls();
   } catch (error) {
-    els.modelStatus.classList.add("error");
-    els.modelStatus.innerHTML = `<i></i> ${escapeHtml(error.message)}`;
+    setModelStatus("error", error.message);
   }
 }
 
@@ -142,13 +73,18 @@ function addFiles(fileList) {
 }
 
 function renderFiles() {
-  els.fileList.innerHTML = state.files.map((file, index) => `
-    <div class="file-row">
-      <span class="pdf-badge">PDF</span>
-      <div><strong title="${escapeHtml(file.name)}">${escapeHtml(file.name)}</strong><small>${formatBytes(file.size)}</small></div>
-      <button type="button" data-remove="${index}" aria-label="Quitar ${escapeHtml(file.name)}">×</button>
-    </div>
-  `).join("");
+  const rows = state.files.map((file, index) => {
+    const row = els.fileRowTemplate.content.firstElementChild.cloneNode(true);
+    const name = row.querySelector("strong");
+    const removeButton = row.querySelector("button");
+    name.textContent = file.name;
+    name.title = file.name;
+    row.querySelector("small").textContent = formatBytes(file.size);
+    removeButton.dataset.remove = index;
+    removeButton.setAttribute("aria-label", `Quitar ${file.name}`);
+    return row;
+  });
+  els.fileList.replaceChildren(...rows);
   els.clearButton.disabled = state.files.length === 0 || state.processing;
 }
 
@@ -206,6 +142,73 @@ function matchesResultFilter(result) {
   return true;
 }
 
+function createSummaryCard(filter, label, count, variant = "") {
+  const card = els.summaryCardTemplate.content.firstElementChild.cloneNode(true);
+  card.dataset.resultFilter = filter;
+  card.setAttribute("aria-pressed", String(state.resultFilter === filter));
+  if (variant) card.classList.add(variant);
+  if (state.resultFilter === filter) card.classList.add("active");
+  card.querySelector("span").textContent = label;
+  card.querySelector("strong").textContent = count;
+  return card;
+}
+
+function createResultCard(result, index) {
+  const card = els.resultCardTemplate.content.firstElementChild.cloneNode(true);
+  card.classList.add(result.status);
+  card.querySelector(".result-index").textContent = String(index + 1).padStart(2, "0");
+
+  const fileName = card.querySelector(".result-file strong");
+  fileName.textContent = result.name;
+  fileName.title = result.name;
+  card.querySelector(".result-file small").textContent = formatBytes(result.size);
+
+  const classification = card.querySelector(".classification");
+  const classificationClass = result.classification === "SI" ? "positive" : result.classification === "NO" ? "negative" : "unknown";
+  classification.classList.add(classificationClass);
+  classification.querySelector("strong").textContent = result.classification === "SI" ? "FINIQUITO" : result.classification === "NO" ? "NO FINIQUITO" : "SIN CLASIFICAR";
+  card.querySelector(".probability strong").textContent = percent(result.probability);
+  card.querySelector(".confidence strong").textContent = percent(result.confidence);
+
+  const reviewBadge = card.querySelector(".review-badge");
+  reviewBadge.classList.add(result.manualReview ? "needs-review" : "approved");
+  reviewBadge.textContent = result.manualReview ? "⚑ Revisión manual" : "✓ Confianza suficiente";
+
+  const warning = card.querySelector(".result-warning");
+  if (result.reason) warning.textContent = result.reason;
+  else warning.remove();
+
+  const select = card.querySelector("[data-actual-classification]");
+  const classificationId = `actual-classification-${index}`;
+  select.id = classificationId;
+  select.dataset.resultIndex = index;
+  select.value = result.actualClassification || "";
+  card.querySelector(".actual-classification-label").htmlFor = classificationId;
+
+  const textarea = card.querySelector("[data-result-comment]");
+  const commentId = `comment-${index}`;
+  textarea.id = commentId;
+  textarea.dataset.resultIndex = index;
+  textarea.value = result.comment || "";
+  card.querySelector(".comment-label").htmlFor = commentId;
+
+  const termList = card.querySelector(".term-list");
+  if (result.decisiveTerms.length) {
+    for (const item of result.decisiveTerms) {
+      const term = document.createElement("span");
+      term.textContent = item.term;
+      term.title = `Contribución: ${item.contribution.toFixed(4)}`;
+      termList.append(term);
+    }
+  } else {
+    const emptyTerms = document.createElement("em");
+    emptyTerms.textContent = "Sin términos disponibles";
+    termList.append(emptyTerms);
+  }
+  card.querySelector(".resolution-text").textContent = result.resolutionText || "No disponible";
+  return card;
+}
+
 function renderResults({ scroll = false } = {}) {
   const valid = state.results.filter((result) => result.status === "ok");
   const yes = valid.filter((result) => result.classification === "SI").length;
@@ -218,52 +221,22 @@ function renderResults({ scroll = false } = {}) {
   els.resultsSummary.textContent = state.resultFilter === "total"
     ? processedText
     : `${processedText} · ${filteredResults.length} resultado${filteredResults.length === 1 ? "" : "s"} visible${filteredResults.length === 1 ? "" : "s"}`;
-  els.summaryCards.innerHTML = `
-    <button class="summary-card ${state.resultFilter === "total" ? "active" : ""}" type="button" data-result-filter="total" aria-pressed="${state.resultFilter === "total"}"><span>Total</span><strong>${state.results.length}</strong></button>
-    <button class="summary-card yes ${state.resultFilter === "yes" ? "active" : ""}" type="button" data-result-filter="yes" aria-pressed="${state.resultFilter === "yes"}"><span>Finiquitos</span><strong>${yes}</strong></button>
-    <button class="summary-card no ${state.resultFilter === "no" ? "active" : ""}" type="button" data-result-filter="no" aria-pressed="${state.resultFilter === "no"}"><span>No finiquitos</span><strong>${no}</strong></button>
-    <button class="summary-card review ${state.resultFilter === "review" ? "active" : ""}" type="button" data-result-filter="review" aria-pressed="${state.resultFilter === "review"}"><span>Revisión manual</span><strong>${reviews}</strong></button>
-  `;
-  els.resultsList.innerHTML = filteredResults.map(({ result, index }) => {
-    const terms = result.decisiveTerms.length
-      ? result.decisiveTerms.map((item) => `<span title="Contribución: ${item.contribution.toFixed(4)}">${escapeHtml(item.term)}</span>`).join("")
-      : "<em>Sin términos disponibles</em>";
-    const reviewClass = result.manualReview ? "needs-review" : "approved";
-    return `
-      <article class="result-card ${result.status}">
-        <div class="result-main">
-          <span class="result-index">${String(index + 1).padStart(2, "0")}</span>
-          <div class="result-file"><strong title="${escapeHtml(result.name)}">${escapeHtml(result.name)}</strong><small>${formatBytes(result.size)}</small></div>
-          <div class="classification ${result.classification === "SI" ? "positive" : result.classification === "NO" ? "negative" : "unknown"}"><span>Clasificación</span><strong>${result.classification === "SI" ? "FINIQUITO" : result.classification === "NO" ? "NO FINIQUITO" : "SIN CLASIFICAR"}</strong></div>
-          <div class="metric"><span>Probabilidad de finiquito</span><strong>${percent(result.probability)}</strong></div>
-          <div class="metric"><span>Confianza</span><strong>${percent(result.confidence)}</strong></div>
-          <div class="review-badge ${reviewClass}">${result.manualReview ? "⚑ Revisión manual" : "✓ Confianza suficiente"}</div>
-        </div>
-        ${result.reason ? `<div class="result-warning">${escapeHtml(result.reason)}</div>` : ""}
-        <div class="feedback-panel">
-          <div>
-            <label for="actual-classification-${index}">Clasificación real</label>
-            <select id="actual-classification-${index}" data-actual-classification data-result-index="${index}">
-              <option value="" ${result.actualClassification === "" ? "selected" : ""}>Sin confirmar</option>
-              <option value="SI" ${result.actualClassification === "SI" ? "selected" : ""}>Finiquito</option>
-              <option value="NO" ${result.actualClassification === "NO" ? "selected" : ""}>No finiquito</option>
-            </select>
-          </div>
-          <div>
-            <label for="comment-${index}">Comentario <span>opcional</span></label>
-            <textarea id="comment-${index}" data-result-comment data-result-index="${index}" maxlength="1000" placeholder="Agregar una observación sobre este resultado">${escapeHtml(result.comment || "")}</textarea>
-          </div>
-        </div>
-        <details>
-          <summary>Ver términos y texto analizado <span>＋</span></summary>
-          <div class="detail-grid">
-            <div><h3>Términos con mayor contribución</h3><div class="term-list">${terms}</div></div>
-            <div><h3>Texto posterior al último “RESUELVE”</h3><p class="resolution-text">${escapeHtml(result.resolutionText || "No disponible")}</p></div>
-          </div>
-        </details>
-      </article>
-    `;
-  }).join("") || `<p class="empty-results">No hay documentos en esta categoría.</p>`;
+  els.summaryCards.replaceChildren(
+    createSummaryCard("total", "Total", state.results.length),
+    createSummaryCard("yes", "Finiquitos", yes, "yes"),
+    createSummaryCard("no", "No finiquitos", no, "no"),
+    createSummaryCard("review", "Revisión manual", reviews, "review"),
+  );
+
+  const cards = filteredResults.map(({ result, index }) => createResultCard(result, index));
+  if (cards.length) {
+    els.resultsList.replaceChildren(...cards);
+  } else {
+    const emptyResults = document.createElement("p");
+    emptyResults.className = "empty-results";
+    emptyResults.textContent = "No hay documentos en esta categoría.";
+    els.resultsList.replaceChildren(emptyResults);
+  }
   els.resultsSection.hidden = false;
   if (scroll) els.resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
