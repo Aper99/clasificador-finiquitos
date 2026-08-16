@@ -79,7 +79,7 @@ document.querySelector("#app").innerHTML = `
     </section>
   </main>
 
-  <footer><span>LexFiniquito · Modelo de regresión logística</span><span>Clasificador de resoluciones judiciales</span></footer>
+  <footer><span>LexFiniquito · Modelo de regresión logística</span><span class="academic-note">Proyecto elaborado como trabajo final para el Diplomado en Inteligencia Artificial Aplicada.</span></footer>
 `;
 
 const els = {

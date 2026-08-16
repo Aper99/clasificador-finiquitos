@@ -5,3 +5,7 @@ Aplicación web para clasificar resoluciones judiciales en formato PDF como fini
 La aplicación utiliza el texto posterior a la última aparición de `RESUELVE` y presenta la clasificación, la probabilidad, la confianza y los términos con mayor contribución. Los resultados pueden exportarse a Excel.
 
 Los PDF se procesan en el navegador. El servidor solo entrega los archivos estáticos de la aplicación.
+
+## Nota académica
+
+Este proyecto fue elaborado como trabajo final para el Diplomado en Inteligencia Artificial Aplicada.
