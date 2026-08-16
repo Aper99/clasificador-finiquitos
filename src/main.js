@@ -297,8 +297,8 @@ function exportResults() {
     "REQUIERE REVISIÓN MANUAL": result.manualReview ? "SI" : "NO",
     "COMENTARIO": result.comment || "",
     "MOTIVO / ADVERTENCIA": result.reason,
-    "TÉRMINOS CON MAYOR CONTRIBUCIÓN": result.decisiveTerms.map((item) => `${item.term} (${item.contribution.toFixed(4)})`).join("; "),
-    "TEXTO DESPUÉS DEL ÚLTIMO RESUELVE": result.resolutionText,
+    "TÉRMINOS RELEVANTES": result.decisiveTerms.map((item) => `${item.term} (${item.contribution.toFixed(4)})`).join("; "),
+    "TEXTO DE LA RESOLUCIÓN": result.resolutionText || "",
   }));
   const sheet = XLSX.utils.json_to_sheet(rows);
   sheet["!cols"] = [
